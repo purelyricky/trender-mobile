@@ -22,6 +22,10 @@ import {
     brandsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_BRANDS_COLLECTION_ID,
     clothesCollectionId:
       process.env.EXPO_PUBLIC_APPWRITE_CLOTHES_COLLECTION_ID,
+      user_interactions: process.env.EXPO_PUBLIC_APPWRITE_USERINTERACTIONS_COLLECTION_ID,
+      user_cartitems: process.env.EXPO_PUBLIC_APPWRITE_USERCARTITEMS_COLLECTION_ID,
+      user_saveditems: process.env.EXPO_PUBLIC_APPWRITE_USERSAVEDITEMS_COLLECTION_ID,
+  
   };
   
   export const client = new Client();
@@ -121,7 +125,7 @@ import {
     limit?: number;
   }) {
     try {
-      const buildQuery = [Query.orderDesc("$createdAt")];
+      const buildQuery = [Query.orderAsc("$createdAt")];
   
       if (filter && filter !== "All")
         buildQuery.push(Query.equal("type", filter));

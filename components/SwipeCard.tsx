@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, Platform } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { 
   useAnimatedStyle, 
@@ -8,10 +8,8 @@ import Animated, {
   interpolate,
   runOnJS
 } from 'react-native-reanimated';
-import { Heart, ShoppingCart, X } from 'lucide-react-native';
-
-import icons from "@/constants/icons";
-import images from "@/constants/images";
+import { Bookmark, ShoppingCart, X } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Models } from "react-native-appwrite";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -19,19 +17,19 @@ const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
 
 interface SwipeCardProps {
   item: Models.Document;
-  onPress: () => void;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onSwipeUp: () => void;
+  style?: any;
 }
 
-export const SwipeCard = ({ 
+export default function SwipeCard({ 
   item, 
-  onPress, 
   onSwipeLeft, 
   onSwipeRight, 
-  onSwipeUp 
-}: SwipeCardProps) => {
+  onSwipeUp,
+  style
+}: SwipeCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 
@@ -42,13 +40,15 @@ export const SwipeCard = ({
     })
     .onEnd(() => {
       if (translateY.value < -SWIPE_THRESHOLD) {
-        translateY.value = withSpring(-SCREEN_HEIGHT);
+        translateY.value = withSpring(-SCREEN_HEIGHT, { damping: 100 });
         runOnJS(onSwipeUp)();
       } else if (translateX.value < -SWIPE_THRESHOLD) {
-        translateX.value = withSpring(-SCREEN_WIDTH);
+        translateX.value = withSpring(-SCREEN_WIDTH * 1.5, { damping: 100 });
+        translateY.value = withSpring(0);
         runOnJS(onSwipeLeft)();
       } else if (translateX.value > SWIPE_THRESHOLD) {
-        translateX.value = withSpring(SCREEN_WIDTH);
+        translateX.value = withSpring(SCREEN_WIDTH * 1.5, { damping: 100 });
+        translateY.value = withSpring(0);
         runOnJS(onSwipeRight)();
       } else {
         translateX.value = withSpring(0);
@@ -123,82 +123,207 @@ export const SwipeCard = ({
     ],
   }));
 
+  const overlayStyle = useAnimatedStyle(() => {
+    const xProgress = Math.abs(translateX.value) / SWIPE_THRESHOLD;
+    const yProgress = Math.abs(translateY.value) / SWIPE_THRESHOLD;
+    
+    let gradientColors = ['transparent', 'transparent'];
+    
+    if (translateX.value < 0) {
+      // Dislike - Red gradient
+      gradientColors = [
+        `rgba(239, 68, 68, ${xProgress * 0.5})`,
+        `rgba(239, 68, 68, ${xProgress * 0.7})`
+      ];
+    } else if (translateX.value > 0) {
+      // Like - Green gradient
+      gradientColors = [
+        `rgba(34, 197, 94, ${xProgress * 0.5})`,
+        `rgba(34, 197, 94, ${xProgress * 0.7})`
+      ];
+    } else if (translateY.value < 0) {
+      // Add to cart - Blue gradient
+      gradientColors = [
+        `rgba(59, 130, 246, ${yProgress * 0.5})`,
+        `rgba(59, 130, 246, ${yProgress * 0.7})`
+      ];
+    }
+
+    return {
+      backgroundColor: gradientColors[1],
+    };
+  });
+
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View 
-        className="flex-1 w-full h-[80%] relative"
-        style={cardStyle}
-      >
-        <TouchableOpacity 
-          onPress={onPress}
-          className="flex flex-col items-start w-full h-full relative"
-        >
+      <Animated.View style={[styles.card, cardStyle, style]}>
+        <View style={styles.cardInner}>
           <Image 
             source={{ uri: item.image }} 
-            className="size-full rounded-2xl" 
+            style={styles.image}
+            resizeMode="cover"
           />
-
-          <Image
-            source={images.cardGradient}
-            className="size-full rounded-2xl absolute bottom-0"
-          />
-
-          <View className="flex flex-row items-center absolute top-5 right-5 bg-white/90 px-3 py-1.5 rounded-full">
-            <X size={20} color="#FF4B4B" />
-            <Text className="text-xs font-rubik-bold text-primary-300 ml-1">
-              Dislike
-            </Text>
-          </View>
-
-          <View className="flex flex-col items-start absolute bottom-5 inset-x-5">
-            <Text
-              className="text-xl font-rubik-extrabold text-white"
-              numberOfLines={1}
+          
+          <Animated.View style={[styles.colorOverlay, overlayStyle]} />
+          
+          <View style={styles.overlay}>
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.7)']}
+              style={styles.gradient}
             >
-              {item.name}
-            </Text>
-            <Text className="text-base font-rubik text-white" numberOfLines={1}>
-              {item.brand}
-            </Text>
-
-            <View className="flex flex-row items-center justify-between w-full">
-              <Text className="text-xl font-rubik-extrabold text-white">
-                ${item.price}
-              </Text>
-              <Image source={icons.heart} className="size-5" />
-            </View>
+              <View style={styles.productInfo}>
+                <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.brand} numberOfLines={1}>{item.description}</Text>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.price}>HUF {item.price}</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
-        </TouchableOpacity>
 
-        <View className="absolute inset-0 pointer-events-none">
-          <Animated.View 
-            className="absolute left-5 top-1/2" 
-            style={leftIndicatorStyle}
-          >
-            <View className="w-20 h-20 rounded-full bg-red-500 items-center justify-center">
-              <X size={50} color="#fff" />
-            </View>
-          </Animated.View>
-
-          <Animated.View 
-            className="absolute right-5 top-1/2" 
-            style={rightIndicatorStyle}
-          >
-            <View className="w-20 h-20 rounded-full bg-green-500 items-center justify-center">
-              <Heart size={50} color="#fff" />
-            </View>
-          </Animated.View>
-
-          <Animated.View 
-            className="absolute top-1/3 self-center" 
-            style={topIndicatorStyle}
-          >
-            <View className="w-20 h-20 rounded-full bg-blue-500 items-center justify-center">
-              <ShoppingCart size={50} color="#fff" />
-            </View>
-          </Animated.View>
+          <View style={styles.actionIndicators}>
+            <Animated.View style={[styles.indicator, styles.leftIndicator, leftIndicatorStyle]}>
+              <View style={[styles.iconCircle, styles.dislikeCircle]}>
+                <X size={80} color="#fff" strokeWidth={4} />
+              </View>
+            </Animated.View>
+            
+            <Animated.View style={[styles.indicator, styles.rightIndicator, rightIndicatorStyle]}>
+              <View style={[styles.iconCircle, styles.likeCircle]}>
+                <Bookmark size={80} color="#fff" strokeWidth={4} />
+              </View>
+            </Animated.View>
+            
+            <Animated.View style={[styles.indicator, styles.topIndicator, topIndicatorStyle]}>
+              <View style={[styles.iconCircle, styles.cartCircle]}>
+                <ShoppingCart size={80} color="#fff" strokeWidth={4} />
+              </View>
+            </Animated.View>
+          </View>
         </View>
       </Animated.View>
     </GestureDetector>
   );
-};
+}
+
+const styles = StyleSheet.create({
+  card: {
+    width: Platform.select({
+      web: Math.min(SCREEN_WIDTH - 32, 640),
+      default: SCREEN_WIDTH - 20
+    }),
+    height: Platform.select({
+      web: Math.min(SCREEN_HEIGHT - 280, 560),
+      default: SCREEN_HEIGHT - 268  // Adjusted this value to account for tabs and filters
+    }),
+    position: 'absolute',
+    backgroundColor: 'transparent',
+    alignSelf: 'center',
+  },
+  cardInner: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  colorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.5,
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  gradient: {
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  productInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  name: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: 'white',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  brand: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  price: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    color: 'white',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  actionIndicators: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  indicator: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 6,
+  },
+  leftIndicator: {
+    left: 20,
+  },
+  rightIndicator: {
+    right: 20,
+  },
+  topIndicator: {
+    top: '30%',
+  },
+  dislikeCircle: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  likeCircle: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  cartCircle: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+});
