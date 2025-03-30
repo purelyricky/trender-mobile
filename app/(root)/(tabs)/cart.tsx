@@ -7,6 +7,7 @@ import { useAppwrite } from "@/lib/useAppwrite";
 import { getUserCartItems } from "@/lib/appwrite";
 import NoResults from "@/components/NoResults";
 import { router } from 'expo-router';
+import { moveCartItemToSaved } from "@/lib/appwrite";
 
 export default function Cart() {
   const { user } = useGlobalContext();
@@ -31,6 +32,23 @@ export default function Cart() {
       total: subtotal + tax
     };
   }, [cartItems]);
+
+  const handleDelete = async (itemId: string, cartItemId: string) => {
+    try {
+      if (!user) return;
+      
+      await moveCartItemToSaved({
+        userId: user.$id,
+        clothingId: itemId,
+        cartItemId: cartItemId,
+      });
+
+      // Refresh the cart items
+      refetch({});
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+    }
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -75,7 +93,7 @@ export default function Cart() {
                 </View>
                 <TouchableOpacity 
                   className="p-2"
-                  onPress={() => {/* Handle delete */}}
+                  onPress={() => handleDelete(item.$id, item.cartItemId)}
                 >
                   <Trash2 size={18} color="#666" />
                 </TouchableOpacity>

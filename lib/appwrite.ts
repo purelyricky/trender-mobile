@@ -119,13 +119,17 @@ import {
     filter,
     query,
     limit,
+    userId,
+    excludeIds = [],
   }: {
     filter: string;
     query: string;
     limit?: number;
+    userId?: string;
+    excludeIds?: string[];
   }) {
     try {
-      const buildQuery = [Query.orderAsc("$createdAt")];
+      const buildQuery = [Query.orderDesc("$createdAt")]; // Changed to orderDesc for newest first
   
       if (filter && filter !== "All")
         buildQuery.push(Query.equal("type", filter));
@@ -138,6 +142,27 @@ import {
             Query.search("type", query),
           ])
         );
+  
+      // Get all interacted items first if userId exists
+      let allExcludedIds = [...new Set(excludeIds)]; // Remove duplicates from excludeIds
+      
+      if (userId) {
+        const interactions = await databases.listDocuments(
+          config.databaseId!,
+          config.user_interactions!,
+          [Query.equal("userId", userId)]
+        );
+        
+        const interactedItemIds = interactions.documents.map(doc => doc.clothingId);
+        allExcludedIds = [...new Set([...allExcludedIds, ...interactedItemIds])];
+      }
+  
+      // Use individual notEqual queries for each ID to exclude
+      if (allExcludedIds.length > 0) {
+        allExcludedIds.forEach(id => {
+          buildQuery.push(Query.notEqual("$id", id));
+        });
+      }
   
       if (limit) buildQuery.push(Query.limit(limit));
   
@@ -335,5 +360,88 @@ import {
     } catch (error) {
       console.error('Failed to add item to cart:', error);
       return null;
+    }
+  }
+
+  export async function moveCartItemToSaved({
+    userId,
+    clothingId,
+    cartItemId,
+  }: {
+    userId: string;
+    clothingId: string;
+    cartItemId: string;
+  }) {
+    try {
+      // Delete from cart
+      await databases.deleteDocument(
+        config.databaseId!,
+        config.user_cartitems!,
+        cartItemId
+      );
+  
+      // Add to saved items
+      await databases.createDocument(
+        config.databaseId!,
+        config.user_saveditems!,
+        ID.unique(),
+        {
+          userId,
+          clothingId,
+          savedAt: new Date().toISOString(),
+        }
+      );
+  
+      return true;
+    } catch (error) {
+      console.error('Failed to move item from cart to saved:', error);
+      return false;
+    }
+  }
+
+  // Add these new functions
+  
+  export async function removeFromSavedItems(userId: string, clothingId: string) {
+    try {
+      // First, find the saved item document
+      const savedItems = await databases.listDocuments(
+        config.databaseId!,
+        config.user_saveditems!,
+        [
+          Query.equal('userId', userId),
+          Query.equal('clothingId', clothingId),
+        ]
+      );
+  
+      if (savedItems.documents.length > 0) {
+        // Delete the saved item
+        await databases.deleteDocument(
+          config.databaseId!,
+          config.user_saveditems!,
+          savedItems.documents[0].$id
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to remove from saved items:', error);
+      return false;
+    }
+  }
+  
+  export async function checkIfItemIsSaved(userId: string, clothingId: string) {
+    try {
+      const savedItems = await databases.listDocuments(
+        config.databaseId!,
+        config.user_saveditems!,
+        [
+          Query.equal('userId', userId),
+          Query.equal('clothingId', clothingId),
+        ]
+      );
+      return savedItems.documents.length > 0;
+    } catch (error) {
+      console.error('Failed to check if item is saved:', error);
+      return false;
     }
   }

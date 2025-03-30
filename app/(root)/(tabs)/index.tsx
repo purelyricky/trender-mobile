@@ -25,140 +25,147 @@ import { createUserInteraction, addToSavedItems, addToCart } from "@/lib/appwrit
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+const BATCH_SIZE = 15;
+const BATCH_THRESHOLD = 5;
+
 const Home = () => {
   const { user } = useGlobalContext();
   const params = useLocalSearchParams<{ query?: string; filter?: string }>();
+  
+  const [currentBatch, setCurrentBatch] = useState<Models.Document[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const {
-    data: properties,
-    refetch,
-    loading,
-  } = useAppwrite({
-    fn: getProperties,
-    params: {
-      filter: params.filter ?? "All",
-      query: params.query ?? "",
-      limit: 15,
-    },
-    skip: true,
-  });
+  const loadProperties = async () => {
+    try {
+      // Get current item IDs to exclude from next batch
+      const currentIds = currentBatch.map(item => item.$id);
+      
+      const newItems = await getProperties({
+        filter: params.filter ?? "All",
+        query: params.query ?? "",
+        limit: BATCH_SIZE * 2, // Request more items to ensure we have enough after filtering
+        userId: user?.$id,
+        excludeIds: currentIds,
+      });
+      
+      // Ensure items are unique using Set
+      const existingIds = new Set(currentBatch.map(item => item.$id));
+      const uniqueNewItems = newItems.filter(item => !existingIds.has(item.$id));
+      
+      console.log(`Loaded ${uniqueNewItems.length} new unique items`);
+      
+      // Update batch with unique items only
+      setCurrentBatch(prev => {
+        const combined = [...prev, ...uniqueNewItems];
+        const uniqueItems = Array.from(
+          new Map(combined.map(item => [item.$id, item])).values()
+        );
+        return uniqueItems;
+      });
+      
+      setInitialLoading(false);
+      setIsLoadingMore(false);
+    } catch (error) {
+      console.error('Failed to load properties:', error);
+      setInitialLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
 
+  // Initial load and filter/query changes
   useEffect(() => {
-    refetch({
-      filter: params.filter ?? "All",
-      query: params.query ?? "",
-      limit: 15,
-    });
+    setInitialLoading(true);
+    setCurrentBatch([]);
+    loadProperties();
   }, [params.filter, params.query]);
 
+  // Load more items when batch gets low
+  useEffect(() => {
+    if (!isLoadingMore && currentBatch.length <= BATCH_THRESHOLD) {
+      setIsLoadingMore(true);
+      loadProperties();
+    }
+  }, [currentBatch.length]);
+
+  const removeItemFromBatch = (itemId: string) => {
+    setCurrentBatch(prev => prev.filter(item => item.$id !== itemId));
+    console.log(`Removed item ${itemId} from batch. Remaining items: ${currentBatch.length - 1}`);
+  };
+
+  const handleInteraction = async (
+    itemId: string, 
+    interactionType: "like" | "dislike" | "cart",
+    additionalAction?: () => Promise<void>
+  ) => {
+    if (!user) return;
+    console.log(`Processing ${interactionType} for item ${itemId}`);
+    
+    try {
+      // Remove item immediately for smooth UX
+      removeItemFromBatch(itemId);
+
+      // Process interaction in background
+      await Promise.all([
+        createUserInteraction({
+          userId: user.$id,
+          clothingId: itemId,
+          interactionType
+        }),
+        additionalAction && additionalAction()
+      ]);
+
+      console.log(`Successfully processed ${interactionType} for item ${itemId}`);
+    } catch (error) {
+      console.error(`Failed to process ${interactionType}:`, error);
+    }
+  };
+
+  const handleSwipeLeft = (itemId: string) => {
+    handleInteraction(itemId, "dislike");
+  };
+
+  const handleSwipeRight = (itemId: string) => {
+    handleInteraction(itemId, "like", async () => {
+      await addToSavedItems({
+        userId: user!.$id,
+        clothingId: itemId,
+      });
+    });
+  };
+
+  const handleSwipeUp = (itemId: string) => {
+    handleInteraction(itemId, "cart", async () => {
+      await addToCart({
+        userId: user!.$id,
+        clothingId: itemId,
+      });
+    });
+  };
+
   const renderContent = () => {
-    if (loading) {
+    if (initialLoading) {
       return <ActivityIndicator size="large" className="text-primary-300 mt-5" />;
     }
 
-    if (!properties || properties.length === 0) {
+    if (!currentBatch || currentBatch.length === 0) {
       return <NoResults />;
     }
 
     return (
       <View className="flex-1 items-center justify-start px-5 mt-5">
-        {properties.map((item, index) => (
+        {currentBatch.map((item, index) => (
           <SwipeCard 
             key={item.$id}
             item={item} 
             onSwipeLeft={() => handleSwipeLeft(item.$id)}
             onSwipeRight={() => handleSwipeRight(item.$id)}
             onSwipeUp={() => handleSwipeUp(item.$id)}
-            style={index > 0 ? { zIndex: properties.length - index } : {}}
+            style={index > 0 ? { zIndex: currentBatch.length - index } : {}}
           />
         )).reverse()}
       </View>
     );
-  };
-
-  const handleSwipeLeft = async (itemId: string) => {
-    if (!user) return;
-    console.log(`Processing dislike for item ${itemId}`);
-    
-    try {
-      await createUserInteraction({
-        userId: user.$id,
-        clothingId: itemId,
-        interactionType: "dislike"
-      });
-      console.log(`Item ${itemId} marked as disliked`);
-      
-      // Refetch to update the feed
-      refetch({
-        filter: params.filter ?? "All",
-        query: params.query ?? "",
-        limit: 15,
-      });
-    } catch (error) {
-      console.error('Failed to process dislike:', error);
-    }
-  };
-
-  const handleSwipeRight = async (itemId: string) => {
-    if (!user) return;
-    console.log(`Processing like for item ${itemId}`);
-    
-    try {
-      // Create interaction
-      await createUserInteraction({
-        userId: user.$id,
-        clothingId: itemId,
-        interactionType: "like"
-      });
-      
-      // Add to saved items
-      await addToSavedItems({
-        userId: user.$id,
-        clothingId: itemId,
-      });
-      
-      console.log(`Item ${itemId} marked as liked and saved`);
-      
-      // Refetch to update the feed
-      refetch({
-        filter: params.filter ?? "All",
-        query: params.query ?? "",
-        limit: 15,
-      });
-    } catch (error) {
-      console.error('Failed to process like:', error);
-    }
-  };
-
-  const handleSwipeUp = async (itemId: string) => {
-    if (!user) return;
-    console.log(`Processing add to cart for item ${itemId}`);
-    
-    try {
-      // Create interaction
-      await createUserInteraction({
-        userId: user.$id,
-        clothingId: itemId,
-        interactionType: "cart"
-      });
-      
-      // Add to cart
-      await addToCart({
-        userId: user.$id,
-        clothingId: itemId,
-      });
-      
-      console.log(`Item ${itemId} added to cart`);
-      
-      // Refetch to update the feed
-      refetch({
-        filter: params.filter ?? "All",
-        query: params.query ?? "",
-        limit: 15,
-      });
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
   };
 
   return (
