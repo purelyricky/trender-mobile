@@ -173,7 +173,7 @@ export default function SwipeCard({
             >
               <View style={styles.productInfo}>
                 <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.brand} numberOfLines={1}>{item.description}</Text>
+                <Text style={styles.brand} numberOfLines={1}>{item.brand}</Text>
                 <View style={styles.priceContainer}>
                   <Text style={styles.price}>HUF {item.price}</Text>
                 </View>

@@ -21,6 +21,7 @@ import { GestureWrapper } from "@/components/GestureWrapper";
 import { useAppwrite } from "@/lib/useAppwrite";
 import { useGlobalContext } from "@/lib/global-provider";
 import { getProperties } from "@/lib/appwrite";
+import { createUserInteraction, addToSavedItems, addToCart } from "@/lib/appwrite";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -65,14 +66,99 @@ const Home = () => {
           <SwipeCard 
             key={item.$id}
             item={item} 
-            onSwipeLeft={() => {/* To be implemented */}}
-            onSwipeRight={() => {/* To be implemented */}}
-            onSwipeUp={() => {/* To be implemented */}}
+            onSwipeLeft={() => handleSwipeLeft(item.$id)}
+            onSwipeRight={() => handleSwipeRight(item.$id)}
+            onSwipeUp={() => handleSwipeUp(item.$id)}
             style={index > 0 ? { zIndex: properties.length - index } : {}}
           />
         )).reverse()}
       </View>
     );
+  };
+
+  const handleSwipeLeft = async (itemId: string) => {
+    if (!user) return;
+    console.log(`Processing dislike for item ${itemId}`);
+    
+    try {
+      await createUserInteraction({
+        userId: user.$id,
+        clothingId: itemId,
+        interactionType: "dislike"
+      });
+      console.log(`Item ${itemId} marked as disliked`);
+      
+      // Refetch to update the feed
+      refetch({
+        filter: params.filter ?? "All",
+        query: params.query ?? "",
+        limit: 15,
+      });
+    } catch (error) {
+      console.error('Failed to process dislike:', error);
+    }
+  };
+
+  const handleSwipeRight = async (itemId: string) => {
+    if (!user) return;
+    console.log(`Processing like for item ${itemId}`);
+    
+    try {
+      // Create interaction
+      await createUserInteraction({
+        userId: user.$id,
+        clothingId: itemId,
+        interactionType: "like"
+      });
+      
+      // Add to saved items
+      await addToSavedItems({
+        userId: user.$id,
+        clothingId: itemId,
+      });
+      
+      console.log(`Item ${itemId} marked as liked and saved`);
+      
+      // Refetch to update the feed
+      refetch({
+        filter: params.filter ?? "All",
+        query: params.query ?? "",
+        limit: 15,
+      });
+    } catch (error) {
+      console.error('Failed to process like:', error);
+    }
+  };
+
+  const handleSwipeUp = async (itemId: string) => {
+    if (!user) return;
+    console.log(`Processing add to cart for item ${itemId}`);
+    
+    try {
+      // Create interaction
+      await createUserInteraction({
+        userId: user.$id,
+        clothingId: itemId,
+        interactionType: "cart"
+      });
+      
+      // Add to cart
+      await addToCart({
+        userId: user.$id,
+        clothingId: itemId,
+      });
+      
+      console.log(`Item ${itemId} added to cart`);
+      
+      // Refetch to update the feed
+      refetch({
+        filter: params.filter ?? "All",
+        query: params.query ?? "",
+        limit: 15,
+      });
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
   };
 
   return (
