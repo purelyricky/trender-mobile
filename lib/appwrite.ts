@@ -39,34 +39,56 @@ import {
   export const databases = new Databases(client);
   export const storage = new Storage(client);
   
-  export async function login() {
+
+  
+  export async function signIn({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }) {
     try {
-      const redirectUri = Linking.createURL("/");
-  
-      const response = await account.createOAuth2Token(
-        OAuthProvider.Google,
-        redirectUri
-      );
-      if (!response) throw new Error("Create OAuth2 token failed");
-  
-      const browserResult = await openAuthSessionAsync(
-        response.toString(),
-        redirectUri
-      );
-      if (browserResult.type !== "success")
-        throw new Error("Create OAuth2 token failed");
-  
-      const url = new URL(browserResult.url);
-      const secret = url.searchParams.get("secret")?.toString();
-      const userId = url.searchParams.get("userId")?.toString();
-      if (!secret || !userId) throw new Error("Create OAuth2 token failed");
-  
-      const session = await account.createSession(userId, secret);
+      console.log(`Signing in user ${email}`);
+      
+      // Create a session with email and password
+      const session = await account.createEmailPasswordSession(email, password);
       if (!session) throw new Error("Failed to create session");
-  
+      
+      console.log('Session created successfully');
       return true;
     } catch (error) {
-      console.error(error);
+      console.error('Failed to sign in:', error);
+      return false;
+    }
+  }
+  
+  export async function signUp({
+    email,
+    password,
+    name,
+  }: {
+    email: string;
+    password: string;
+    name: string;
+  }) {
+    try {
+      console.log(`Creating account for ${email}`);
+      
+      // Create the user account
+      const user = await account.create(
+        ID.unique(),
+        email,
+        password,
+        name
+      );
+      
+      if (!user) throw new Error("Failed to create account");
+      
+      console.log('Account created successfully:', user.$id);
+      return true;
+    } catch (error) {
+      console.error('Failed to create account:', error);
       return false;
     }
   }
