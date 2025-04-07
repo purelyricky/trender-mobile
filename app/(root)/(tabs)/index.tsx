@@ -29,7 +29,7 @@ const BATCH_SIZE = 15;
 const BATCH_THRESHOLD = 5;
 
 const Home = () => {
-  const { user } = useGlobalContext();
+  const { user, incrementDataVersion } = useGlobalContext();
   const params = useLocalSearchParams<{ query?: string; filter?: string }>();
   
   const [currentBatch, setCurrentBatch] = useState<Models.Document[]>([]);
@@ -115,6 +115,8 @@ const Home = () => {
         additionalAction && additionalAction()
       ]);
 
+      // Increment data version to trigger updates across the app
+      incrementDataVersion();
       console.log(`Successfully processed ${interactionType} for item ${itemId}`);
     } catch (error) {
       console.error(`Failed to process ${interactionType}:`, error);

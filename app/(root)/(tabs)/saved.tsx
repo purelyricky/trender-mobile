@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, ScrollView, Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGlobalContext } from "@/lib/global-provider";
 import { useAppwrite } from "@/lib/useAppwrite";
 import { getUserSavedItems } from "@/lib/appwrite";
 import NoResults from "@/components/NoResults";
-import { router } from "expo-router";
+import { router, useFocusEffect } from 'expo-router';
 
 export default function SavedItems() {
-  const { user } = useGlobalContext();
+  const { user, dataVersion, incrementDataVersion } = useGlobalContext();
+  const [hasCheckedData, setHasCheckedData] = useState(false);
 
   const {
     data: savedItems,
@@ -18,7 +19,22 @@ export default function SavedItems() {
     fn: () => getUserSavedItems(user?.$id ?? ''),
     params: {},
     skip: !user,
+    deps: [dataVersion],
   });
+
+  React.useEffect(() => {
+    setHasCheckedData(false);
+  }, [dataVersion]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user && !hasCheckedData) {
+        refetch().then(() => {
+          setHasCheckedData(true);
+        });
+      }
+    }, [user, refetch, hasCheckedData])
+  );
 
   const renderContent = () => {
     if (loading) {

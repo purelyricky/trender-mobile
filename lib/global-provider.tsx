@@ -1,23 +1,18 @@
-import React, { createContext, useContext, ReactNode } from "react";
-
+import React, { createContext, useContext, ReactNode, useState } from "react";
+import { Models } from "node-appwrite";
 import { getCurrentUser } from "./appwrite";
 import { useAppwrite } from "./useAppwrite";
-import { Redirect } from "expo-router";
 
 interface GlobalContextType {
   isLogged: boolean;
-  user: User | null;
+  user: Models.User<Models.Preferences> | null;
   loading: boolean;
-  refetch: () => void;
+  refetch: () => Promise<void>;
+  dataVersion: number;
+  incrementDataVersion: () => void;
 }
 
-interface User {
-  $id: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
-
+// Remove duplicate and use undefined type for proper strict null checks
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 interface GlobalProviderProps {
@@ -33,6 +28,13 @@ export const GlobalProvider = ({ children }: GlobalProviderProps) => {
     fn: getCurrentUser,
   });
 
+  // Add dataVersion state
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const incrementDataVersion = () => {
+    setDataVersion(prev => prev + 1);
+  };
+
   const isLogged = !!user;
 
   return (
@@ -42,6 +44,8 @@ export const GlobalProvider = ({ children }: GlobalProviderProps) => {
         user,
         loading,
         refetch,
+        dataVersion,
+        incrementDataVersion,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Text, View, ScrollView, Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react-native";
@@ -6,11 +6,12 @@ import { useGlobalContext } from "@/lib/global-provider";
 import { useAppwrite } from "@/lib/useAppwrite";
 import { getUserCartItems } from "@/lib/appwrite";
 import NoResults from "@/components/NoResults";
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { moveCartItemToSaved } from "@/lib/appwrite";
 
 export default function Cart() {
-  const { user } = useGlobalContext();
+  const { user, dataVersion, incrementDataVersion } = useGlobalContext();
+  const [hasCheckedData, setHasCheckedData] = useState(false);
 
   const {
     data: cartItems,
@@ -20,7 +21,22 @@ export default function Cart() {
     fn: () => getUserCartItems(user?.$id ?? ''),
     params: {},
     skip: !user,
+    deps: [dataVersion],
   });
+
+  React.useEffect(() => {
+    setHasCheckedData(false);
+  }, [dataVersion]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user && !hasCheckedData) {
+        refetch().then(() => {
+          setHasCheckedData(true);
+        });
+      }
+    }, [user, refetch, hasCheckedData])
+  );
 
   const { subtotal, tax, total } = useMemo(() => {
     if (!cartItems) return { subtotal: 0, tax: 0, total: 0 };

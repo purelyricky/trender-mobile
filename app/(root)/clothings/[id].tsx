@@ -21,13 +21,14 @@ import icons from "@/constants/icons";
 
 export default function ClothingDetail() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { user } = useGlobalContext();
+  const { user, dataVersion } = useGlobalContext();
   const [isSaved, setIsSaved] = useState(false);
   const windowHeight = Dimensions.get("window").height;
 
   const { data: clothing } = useAppwrite({
     fn: getPropertyById,
     params: { id: id! },
+    deps: [dataVersion], // Add dataVersion as dependency
   });
 
   useEffect(() => {
