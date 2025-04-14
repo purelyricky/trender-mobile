@@ -4,14 +4,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react-native";
 import { useGlobalContext } from "@/lib/global-provider";
 import { useAppwrite } from "@/lib/useAppwrite";
-import { getUserCartItems } from "@/lib/appwrite";
+import { getUserCartItems, deleteCartItem } from "@/lib/appwrite";
 import NoResults from "@/components/NoResults";
 import { router, useFocusEffect } from 'expo-router';
 import { moveCartItemToSaved } from "@/lib/appwrite";
+import PaymentSheet from "@/components/PaymentSheet";
 
 export default function Cart() {
   const { user, dataVersion, incrementDataVersion } = useGlobalContext();
   const [hasCheckedData, setHasCheckedData] = useState(false);
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
 
   const {
     data: cartItems,
@@ -63,6 +65,29 @@ export default function Cart() {
       refetch({});
     } catch (error) {
       console.error('Failed to delete item:', error);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      if (!user || !cartItems) return;
+      
+      // Delete all items from cart
+      const deletePromises = cartItems.map(item => 
+        deleteCartItem(item.cartItemId)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      // Refresh the cart - make sure to await the refetch
+      incrementDataVersion();
+      await refetch({});
+      
+      console.log('All items removed from cart after successful payment');
+      return true; // Return success status
+    } catch (error) {
+      console.error('Failed to clear cart after payment:', error);
+      return false; // Return failure status
     }
   };
 
@@ -181,7 +206,7 @@ export default function Cart() {
           
           <TouchableOpacity 
             className="w-full h-12 bg-primary-300 rounded-xl flex-row items-center justify-center"
-            onPress={() => {/* Handle checkout */}}
+            onPress={() => setShowPaymentSheet(true)}
           >
             <ShoppingBag size={20} color="#fff" />
             <Text className="font-rubik-medium text-white ml-2">
@@ -190,6 +215,14 @@ export default function Cart() {
           </TouchableOpacity>
         </View>
       )}
+      
+      {/* Payment Sheet */}
+      <PaymentSheet 
+        isVisible={showPaymentSheet}
+        onClose={() => setShowPaymentSheet(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        total={total}
+      />
     </SafeAreaView>
   );
 }

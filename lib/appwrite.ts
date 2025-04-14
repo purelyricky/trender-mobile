@@ -467,3 +467,42 @@ import {
       return false;
     }
   }
+
+  // Function to delete a cart item
+  export async function deleteCartItem(cartItemId: string) {
+    try {
+      console.log(`Deleting cart item ${cartItemId}`);
+      await databases.deleteDocument(
+        config.databaseId!,
+        config.user_cartitems!,
+        cartItemId
+      );
+      return true;
+    } catch (error) {
+      console.error('Failed to delete cart item:', error);
+      return false;
+    }
+  }
+
+  // Function to clear all cart items for a user (used after successful payment)
+  export async function clearUserCart(userId: string) {
+    try {
+      // First, get all cart items for the user
+      const cartItems = await databases.listDocuments(
+        config.databaseId!,
+        config.user_cartitems!,
+        [Query.equal('userId', userId)]
+      );
+
+      // Delete each cart item
+      const deletePromises = cartItems.documents.map(item => 
+        databases.deleteDocument(config.databaseId!, config.user_cartitems!, item.$id)
+      );
+
+      await Promise.all(deletePromises);
+      return true;
+    } catch (error) {
+      console.error('Failed to clear user cart:', error);
+      return false;
+    }
+  }
