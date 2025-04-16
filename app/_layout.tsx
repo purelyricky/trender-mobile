@@ -1,10 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import { ActivityIndicator, View } from "react-native";
 
 import "./global.css";
 import GlobalProvider from "@/lib/global-provider";
+
+// Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -18,12 +22,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      // Hide splash screen after 3 seconds
+      const timer = setTimeout(async () => {
+        await SplashScreen.hideAsync();
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
   }
 
   return (

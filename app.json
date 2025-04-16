@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "trender-app",
-    "slug": "trender-app",
+    "name": "trender",
+    "slug": "trender",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,13 +9,19 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.erick003.trenderapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
-      }
+      },
+      "package": "com.erick003.trenderapp",
+      "buildType": "apk"
     },
     "web": {
       "bundler": "metro",
@@ -27,10 +33,11 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#ffffff",
-          "enableFullScreenImage_legacy": true
+          "splash": {
+            "image": "./assets/images/splash.png",
+            "resizeMode": "cover",
+            "backgroundColor": "#000000"
+          }
         }
       ],
       [
@@ -49,6 +56,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f56cc13c-8a4a-4981-9c06-e8e387251b37"
+      }
     }
   }
 }
