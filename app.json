@@ -31,16 +31,6 @@
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
-        {
-          "splash": {
-            "image": "./assets/images/splash.png",
-            "resizeMode": "cover",
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      [
         "expo-font",
         {
           "fonts": [
