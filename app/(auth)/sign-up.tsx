@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Alert,
@@ -10,6 +10,8 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Animated,
 } from "react-native";
 
 import { signUp } from "@/lib/appwrite";
@@ -25,6 +27,16 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [appearAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    // Animate the form appearance
+    Animated.timing(appearAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   if (!loading && isLogged) return <Redirect href="/" />;
 
@@ -48,7 +60,16 @@ const SignUp = () => {
     try {
       const result = await signUp({ name, email, password });
       if (result) {
-        router.push("/sign-in");
+        Alert.alert(
+          "Success",
+          "Account created successfully! Please sign in.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.push("/sign-in")
+            }
+          ]
+        );
       } else {
         Alert.alert("Error", "Failed to create account. Please try again.");
       }
@@ -77,7 +98,20 @@ const SignUp = () => {
             resizeMode="contain"
           />
 
-          <View className="px-10 flex-1">
+          <Animated.View 
+            className="px-10 flex-1"
+            style={{
+              opacity: appearAnim,
+              transform: [
+                {
+                  translateY: appearAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                  }),
+                },
+              ],
+            }}
+          >
             <Text className="text-base text-center uppercase font-rubik text-black-200">
               Join Trender
             </Text>
@@ -145,9 +179,13 @@ const SignUp = () => {
                 disabled={isSubmitting}
                 className="bg-primary-300 rounded-full w-full py-4 mt-2"
               >
-                <Text className="text-white text-center font-rubik-bold">
-                  {isSubmitting ? "Creating Account..." : "Create Account"}
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white text-center font-rubik-bold">
+                    Create Account
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <View className="flex-row justify-center mt-4">
@@ -161,7 +199,7 @@ const SignUp = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

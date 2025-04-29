@@ -1,7 +1,6 @@
-import React, { createContext, useContext, ReactNode, useState } from "react";
+import React, { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { Models } from "node-appwrite";
 import { getCurrentUser } from "./appwrite";
-import { useAppwrite } from "./useAppwrite";
 
 interface GlobalContextType {
   isLogged: boolean;
@@ -12,24 +11,42 @@ interface GlobalContextType {
   incrementDataVersion: () => void;
 }
 
-// Remove duplicate and use undefined type for proper strict null checks
-const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
+// Create context with default values
+const GlobalContext = createContext<GlobalContextType>({
+  isLogged: false,
+  user: null,
+  loading: true,
+  refetch: async () => {},
+  dataVersion: 0,
+  incrementDataVersion: () => {},
+});
 
 interface GlobalProviderProps {
   children: ReactNode;
 }
 
 export const GlobalProvider = ({ children }: GlobalProviderProps) => {
-  const {
-    data: user,
-    loading,
-    refetch,
-  } = useAppwrite({
-    fn: getCurrentUser,
-  });
-
-  // Add dataVersion state
+  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [dataVersion, setDataVersion] = useState(0);
+
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      const userData = await getCurrentUser();
+      setUser(userData);
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch on mount
+  useEffect(() => {
+    refetch();
+  }, []);
 
   const incrementDataVersion = () => {
     setDataVersion(prev => prev + 1);
@@ -55,9 +72,6 @@ export const GlobalProvider = ({ children }: GlobalProviderProps) => {
 
 export const useGlobalContext = (): GlobalContextType => {
   const context = useContext(GlobalContext);
-  if (!context)
-    throw new Error("useGlobalContext must be used within a GlobalProvider");
-
   return context;
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Alert,
@@ -10,6 +10,8 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Animated,
 } from "react-native";
 
 import { signIn } from "@/lib/appwrite";
@@ -23,6 +25,16 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [appearAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    // Animate the form appearance
+    Animated.timing(appearAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   if (!loading && isLogged) return <Redirect href="/" />;
 
@@ -49,7 +61,7 @@ const Auth = () => {
   };
 
   const handleSignUpPress = () => {
-    router.push("/(auth)/sign-up" as any);
+    router.push("/(auth)/sign-up");
   };
 
   return (
@@ -69,7 +81,20 @@ const Auth = () => {
             resizeMode="contain"
           />
 
-          <View className="px-10 flex-1">
+          <Animated.View 
+            className="px-10 flex-1"
+            style={{
+              opacity: appearAnim,
+              transform: [
+                {
+                  translateY: appearAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                  }),
+                },
+              ],
+            }}
+          >
             <Text className="text-base text-center uppercase font-rubik text-black-200">
               Welcome To Trender
             </Text>
@@ -112,9 +137,13 @@ const Auth = () => {
                 disabled={isSubmitting}
                 className="bg-primary-300 rounded-full w-full py-4 mt-2"
               >
-                <Text className="text-white text-center font-rubik-bold">
-                  {isSubmitting ? "Signing In..." : "Sign In"}
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white text-center font-rubik-bold">
+                    Sign In
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <View className="flex-row justify-center mt-4">
@@ -128,7 +157,7 @@ const Auth = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

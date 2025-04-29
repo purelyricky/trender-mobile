@@ -117,7 +117,13 @@ import {
   
       return null;
     } catch (error) {
-      console.log(error);
+      // Handle specific error for unauthorized guest
+      if (error instanceof Error && 
+          error.message.includes("User (role: guests) missing scope (account)")) {
+        console.log("User is not authenticated");
+      } else {
+        console.error("Error getting current user:", error);
+      }
       return null;
     }
   }
