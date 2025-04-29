@@ -8,24 +8,20 @@ import {
     Query,
     Storage,
   } from "react-native-appwrite";
-  import * as Linking from "expo-linking";
-  import { openAuthSessionAsync } from "expo-web-browser";
+  import Constants from 'expo-constants';
   
   export const config = {
     platform: "com.trender",
-    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-    galleriesCollectionId:
-      process.env.EXPO_PUBLIC_APPWRITE_GALLERIES_COLLECTION_ID,
-    reviewsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_REVIEWS_COLLECTION_ID,
-    brandsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_BRANDS_COLLECTION_ID,
-    clothesCollectionId:
-      process.env.EXPO_PUBLIC_APPWRITE_CLOTHES_COLLECTION_ID,
-      user_interactions: process.env.EXPO_PUBLIC_APPWRITE_USERINTERACTIONS_COLLECTION_ID,
-      user_cartitems: process.env.EXPO_PUBLIC_APPWRITE_USERCARTITEMS_COLLECTION_ID,
-      user_saveditems: process.env.EXPO_PUBLIC_APPWRITE_USERSAVEDITEMS_COLLECTION_ID,
-  
+    endpoint: Constants.expoConfig?.extra?.appwriteEndpoint || '',
+    projectId: Constants.expoConfig?.extra?.appwriteProjectId || '',
+    databaseId: Constants.expoConfig?.extra?.appwriteDatabaseId || '',
+    galleriesCollectionId: Constants.expoConfig?.extra?.appwriteGalleriesCollectionId || '',
+    reviewsCollectionId: Constants.expoConfig?.extra?.appwriteReviewsCollectionId || '',
+    brandsCollectionId: Constants.expoConfig?.extra?.appwriteBrandsCollectionId || '',
+    clothesCollectionId: Constants.expoConfig?.extra?.appwriteClothesCollectionId || '',
+    user_interactions: Constants.expoConfig?.extra?.appwriteUserInteractionsCollectionId || '',
+    user_cartitems: Constants.expoConfig?.extra?.appwriteUserCartItemsCollectionId || '',
+    user_saveditems: Constants.expoConfig?.extra?.appwriteUserSavedItemsCollectionId || '',
   };
   
   export const client = new Client();
