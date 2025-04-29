@@ -12,16 +12,16 @@ import {
   
   export const config = {
     platform: "com.trender",
-    endpoint: Constants.expoConfig?.extra?.appwriteEndpoint || '',
-    projectId: Constants.expoConfig?.extra?.appwriteProjectId || '',
-    databaseId: Constants.expoConfig?.extra?.appwriteDatabaseId || '',
-    galleriesCollectionId: Constants.expoConfig?.extra?.appwriteGalleriesCollectionId || '',
-    reviewsCollectionId: Constants.expoConfig?.extra?.appwriteReviewsCollectionId || '',
-    brandsCollectionId: Constants.expoConfig?.extra?.appwriteBrandsCollectionId || '',
-    clothesCollectionId: Constants.expoConfig?.extra?.appwriteClothesCollectionId || '',
-    user_interactions: Constants.expoConfig?.extra?.appwriteUserInteractionsCollectionId || '',
-    user_cartitems: Constants.expoConfig?.extra?.appwriteUserCartItemsCollectionId || '',
-    user_saveditems: Constants.expoConfig?.extra?.appwriteUserSavedItemsCollectionId || '',
+    endpoint: Constants.expoConfig?.extra?.appwriteEndpoint,
+    projectId: Constants.expoConfig?.extra?.appwriteProjectId,
+    databaseId: Constants.expoConfig?.extra?.appwriteDatabaseId,
+    galleriesCollectionId: Constants.expoConfig?.extra?.appwriteGalleriesCollectionId,
+    reviewsCollectionId: Constants.expoConfig?.extra?.appwriteReviewsCollectionId,
+    brandsCollectionId: Constants.expoConfig?.extra?.appwriteBrandsCollectionId,
+    clothesCollectionId: Constants.expoConfig?.extra?.appwriteClothesCollectionId,
+    user_interactions: Constants.expoConfig?.extra?.appwriteUserInteractionsCollectionId,
+    user_cartitems: Constants.expoConfig?.extra?.appwriteUserCartItemsCollectionId,
+    user_saveditems: Constants.expoConfig?.extra?.appwriteUserSavedItemsCollectionId,
   };
   
   export const client = new Client();
@@ -101,16 +101,24 @@ import {
   
   export async function getCurrentUser() {
     try {
+      // First check if there's a valid session before getting the user
+      try {
+        // This will throw an error if no valid session exists
+        await account.getSession('current');
+      } catch (sessionError) {
+        console.log("No active session found");
+        return null;
+      }
+      
+      // If we get here, there's a valid session, so get the user
       const result = await account.get();
       if (result.$id) {
         const userAvatar = avatar.getInitials(result.name);
-  
         return {
           ...result,
           avatar: userAvatar.toString(),
         };
       }
-  
       return null;
     } catch (error) {
       // Handle specific error for unauthorized guest
